@@ -1,0 +1,254 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REFLEX GAME 4.0</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#080e20;color:white;
+ font-family:Arial,sans-serif;text-align:center;
+ padding:20px;
+}
+h1{color:#00d9ff;font-size:32px}
+h2{color:#00d9ff}
+.card{
+ background:#1b2b49;border-radius:20px;
+ padding:20px;margin:18px auto;max-width:500px;
+}
+button{
+ border:0;border-radius:12px;padding:15px 20px;
+ margin:7px;font-size:16px;font-weight:bold;
+ cursor:pointer;background:#00df80;color:#062b24;
+}
+.yellow{background:#ffc928;color:#222}
+.blue{background:#00c9ed;color:#002b40}
+input{
+ padding:13px;border-radius:10px;border:0;
+ font-size:17px;width:85%;max-width:280px;
+}
+#arena{
+ height:300px;background:#263a5a;
+ border:3px solid #00d9ff;border-radius:20px;
+ position:relative;margin-top:20px;
+}
+#target{
+ display:none;position:absolute;
+ width:65px;height:65px;border-radius:50%;
+ background:#00e87c;border:5px solid white;
+}
+.small{color:#b8c8e0}
+</style>
+</head>
+<body>
+
+<h1>⚡ REFLEX GAME</h1>
+<p>VERSION 4.0</p>
+<p>Deviens le champion de tes réflexes !</p>
+
+<div class="card" id="profile">
+<h2>👤 MON PROFIL</h2>
+<input id="player" placeholder="Ton pseudonyme">
+<br>
+<button onclick="savePlayer()">VALIDER MON PROFIL</button>
+<p id="welcome"></p>
+</div>
+
+<div class="card">
+<h2>📊 MES STATISTIQUES</h2>
+<p>🏆 Score : <b id="score">0</b></p>
+<p>⭐ Niveau : <b id="level">1</b></p>
+<p>🪙 Pièces : <b id="coins">0</b></p>
+<p>⚡ Record : <b id="record">0</b></p>
+</div>
+
+<div class="card">
+<h2>🎮 JEU DE RÉFLEXES</h2>
+<p id="message">Appuie sur commencer !</p>
+<button onclick="startGame()">COMMENCER</button>
+<button class="yellow" onclick="toggleSound()" id="sound">
+🔊 SON ACTIVÉ
+</button>
+<div id="arena">
+<button id="target" onclick="hitTarget()"></button>
+</div>
+<p id="time">Temps : --</p>
+<p id="round">Manche : 0 / 10</p>
+</div>
+
+<div class="card">
+<h2>🎁 RÉCOMPENSE QUOTIDIENNE</h2>
+<p>Reçois 20 pièces chaque jour !</p>
+<button class="yellow" onclick="dailyReward()">
+RÉCUPÉRER
+</button>
+<p id="rewardMessage"></p>
+</div>
+
+<div class="card">
+<h2>🏆 CLASSEMENT</h2>
+<div id="ranking"></div>
+</div>
+
+<div class="card">
+<h2>📢 PUBLICITÉ</h2>
+<p class="small">Espace réservé aux futurs annonceurs.</p>
+<p class="small">Aucune publicité réelle pour le moment.</p>
+</div>
+
+<script>
+const getData = (key, fallback) => {
+ try {
+  const value = localStorage.getItem(key);
+  return value === null ? fallback : JSON.parse(value);
+ } catch(e) { return fallback; }
+};
+
+let player = localStorage.getItem("rg_player") || "";
+let coins = Number(localStorage.getItem("rg_coins")) || 0;
+let record = Number(localStorage.getItem("rg_record")) || 0;
+let score = 0, round = 0, level = 1;
+let startTime = 0, waiting = false, soundOn = true;
+let timer = null;
+let ranking = getData("rg_ranking", []);
+
+const el = id => document.getElementById(id);
+
+function savePlayer(){
+ const name = el("player").value.trim();
+ if(!name){alert("Entre un pseudonyme !");return;}
+ player = name;
+ localStorage.setItem("rg_player",player);
+ el("welcome").textContent = "Bienvenue "+player+" !";
+ refresh();
+}
+
+function refresh(){
+ el("score").textContent = score;
+ el("level").textContent = level;
+ el("coins").textContent = coins;
+ el("record").textContent = record;
+ el("player").value = player;
+ el("welcome").textContent = player ? "Bienvenue "+player+" !" : "";
+}
+
+function playSound(freq=650){
+ if(!soundOn)return;
+ try{
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.frequency.value = freq;
+  gain.gain.value = 0.08;
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime+0.12);
+ }catch(e){}
+}
+
+function toggleSound(){
+ soundOn = !soundOn;
+ el("sound").textContent = soundOn ?
+ "🔊 SON ACTIVÉ" : "🔇 SON COUPÉ";
+}
+
+function startGame(){
+ if(!player){alert("Crée d'abord ton profil !");return;}
+ clearTimeout(timer);
+ score=0;round=0;level=1;
+ el("target").style.display="none";
+ el("message").textContent="Prépare-toi...";
+ refresh();
+ nextRound();
+}
+
+function nextRound(){
+ if(round>=10){finishGame();return;}
+ round++;
+ el("round").textContent="Manche : "+round+" / 10";
+ el("message").textContent="Attends le cercle vert...";
+ waiting=false;
+ el("target").style.display="none";
+ timer=setTimeout(()=>{
+  const arena=el("arena");
+  const target=el("target");
+  target.style.left=Math.random()*(arena.clientWidth-75)+"px";
+  target.style.top=Math.random()*(arena.clientHeight-75)+"px";
+  target.style.display="block";
+  startTime=Date.now();
+  waiting=true;
+  playSound(800);
+ },1000+Math.random()*2500);
+}
+
+function hitTarget(){
+ if(!waiting)return;
+ const reaction=Date.now()-startTime;
+ waiting=false;
+ el("target").style.display="none";
+ score++;
+ coins+=2;
+ level=Math.floor(score/3)+1;
+ el("time").textContent="Temps : "+reaction+" ms";
+ el("message").textContent="Bravo ! +2 pièces 🪙";
+ playSound(1000);
+ refresh();
+ setTimeout(nextRound,1000);
+}
+
+function finishGame(){
+ el("message").textContent="🏆 PARTIE TERMINÉE !";
+ if(score>record){
+  record=score;
+  localStorage.setItem("rg_record",record);
+ }
+ const index=ranking.findIndex(x=>x.name===player);
+ if(index>=0){
+  ranking[index].score=Math.max(ranking[index].score,score);
+ }else{
+  ranking.push({name:player,score:score});
+ }
+ ranking.sort((a,b)=>b.score-a.score);
+ ranking=ranking.slice(0,10);
+ localStorage.setItem("rg_ranking",JSON.stringify(ranking));
+ localStorage.setItem("rg_coins",coins);
+ refresh();
+ showRanking();
+}
+
+function dailyReward(){
+ const today=new Date().toLocaleDateString("en-CA");
+ const last=localStorage.getItem("rg_daily");
+ if(last===today){
+  el("rewardMessage").textContent="Tu as déjà reçu ta récompense aujourd'hui !";
+  return;
+ }
+ coins+=20;
+ localStorage.setItem("rg_coins",coins);
+ localStorage.setItem("rg_daily",today);
+ el("rewardMessage").textContent="🎉 Bravo ! Tu gagnes 20 pièces !";
+ refresh();
+ playSound(1000);
+}
+
+function showRanking(){
+ el("ranking").innerHTML="";
+ if(!ranking.length){
+  el("ranking").textContent="Aucun joueur pour le moment.";
+  return;
+ }
+ ranking.forEach((p,i)=>{
+  const line=document.createElement("p");
+  line.textContent=(i+1)+". "+p.name+" — "+p.score+" points";
+  el("ranking").appendChild(line);
+ });
+}
+
+localStorage.setItem("rg_coins",coins);
+refresh();
+showRanking();
+</script>
+</body>
+</html>
