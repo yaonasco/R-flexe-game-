@@ -1,0 +1,12 @@
+
+{
+  "name": "REFLEX GAME",
+  "short_name": "REFLEX",
+  "description": "Le jeu ultime de réflexes",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080e20",
+  "theme_color": "#080e20"
+}
