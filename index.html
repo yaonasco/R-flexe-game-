@@ -1,12 +1,25 @@
 
 <!DOCTYPE html>
 <html lang="fr">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#080e20">
+ 
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>REFLEX GAME 4.0</title>
 <style>
 *{box-sizing:border-box}
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js")
+      .then(() => console.log("REFLEX GAME prêt hors connexion"))
+      .catch(error => console.error(error));
+  });
+}
+</script>
+ 
 body{
  margin:0;background:#080e20;color:white;
  font-family:Arial,sans-serif;text-align:center;
